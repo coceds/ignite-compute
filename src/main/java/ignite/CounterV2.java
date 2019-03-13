@@ -10,6 +10,7 @@ import org.apache.ignite.internal.util.lang.GridTuple4;
 
 import javax.cache.Cache;
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class CounterV2 {
@@ -17,8 +18,7 @@ public class CounterV2 {
     public static void main(String[] args) throws IgniteException {
         Ignition.setClientMode(true);
         try (Ignite ignite = Ignition.start("cache.xml")) {
-            ClusterGroup clusterGroup = ignite.cluster().forCacheNodes("productCache");
-            GridTuple4 result = ignite.compute(ignite.cluster().forCacheNodes("productCache")).call(
+            Collection<GridTuple4> result = ignite.compute(ignite.cluster().forCacheNodes("productCache")).broadcast(
                     () -> {
                         final long start = System.nanoTime();
                         final AtomicInteger categoryOne = new AtomicInteger();
@@ -27,7 +27,7 @@ public class CounterV2 {
                         try (IgniteCache<String, Product> cache = ignite.getOrCreateCache("productCache")) {
                             final BigDecimal one = new BigDecimal("49.99");
                             final BigDecimal two = new BigDecimal("99.99");
-                            Iterable<Cache.Entry<String, Product>> values = cache.localEntries(CachePeekMode.ALL);
+                            Iterable<Cache.Entry<String, Product>> values = cache.localEntries(CachePeekMode.PRIMARY);
                             values.forEach(p -> {
                                 if (p.getValue().getListPrice() == null) {
                                     //do nothing
@@ -44,7 +44,7 @@ public class CounterV2 {
                     }
             );
 
-
+            result.stream().forEach(System.out::println);
             System.out.println("Results: " + result);
         }
     }
